@@ -11,13 +11,6 @@ namespace biometria_7
 {
     public static class Algorithm
     {
-        //albo to ja jestem debilem, albo ten algorytm jest zjebany i nie ma racji bytu
-        //http://aragorn.pb.bialystok.pl/~zspinfo/arts/2001%20CAIP.pdf - imo caly ten papier jest do dupy... but what do I know
-        //NIE ROZUMIEM CO KURWA OZNACZA 2.1 ppkt. 3 - "Consider the points with 2, 3 or 4 sticking neighbors and change them into 4’s"
-        //"sticking neighbors???????????????????" - moze angielskiego niech sie naucza
-        //nie wazne z ktorej strony na to patrze, warunki wstawiania 4 sa losowe - bo czasem jest wstawiane a czasem nie
-        //po dalszej inspekcji tego papieru, w 2.1 ppkt. 2 sa bledy oznaczania pikseli xD.
-        //gowno obsrane - napisze sam lepiej
         public static Bitmap KMM(Bitmap bmp)
         {
             int[] val = new int[] { 3, 5, 7, 12, 13, 14, 15, 20,
@@ -41,14 +34,14 @@ namespace biometria_7
             byte[] vs = new byte[data.Stride * data.Height];
             Marshal.Copy(data.Scan0, vs, 0, vs.Length);
 
+
+            for (int i = 0; i < data.Height; i++)
+                for (int y = 0; y < data.Width; y++)
+                    grayS[i, y] = (byte)(grayS[i, y] < 25 ? 1 : 0);
             bool c = false;
             do
             {
                 c = false;
-                for (int i = 0; i < data.Height; i++)
-                    for (int y = 0; y < data.Width; y++)
-                        grayS[i, y] = (byte)(grayS[i, y] == 0 ? 1 : 0);
-
                 for (int i = 0; i < data.Height; i++)
                     for (int y = 0; y < data.Width; y++)
                     {
@@ -81,7 +74,6 @@ namespace biometria_7
                         else
                             vs[(i * data.Stride) + y * 3] = 255;
                     }
-
                 for (int n = 2; n < 4; n++)
                     for (int i = 0; i < data.Height; i++)
                         for (int y = 0; y < data.Width; y++)
@@ -104,7 +96,6 @@ namespace biometria_7
             return bmp;
         }
 
-        //TODO make this work :/
         public static int CalculateWeight(int i, int j, byte[,] grayS, int w, int h)
         {
             int[] N = new int[] { 128, 1, 2, 64, 0, 4, 32, 16, 8 };
