@@ -11,6 +11,7 @@ namespace biometria_7
 {
     public static class Algorithm
     {
+        #region KMM
         public static Bitmap KMM(Bitmap bmp)
         {
             int[] val = new int[] { 3, 5, 7, 12, 13, 14, 15, 20,
@@ -119,6 +120,8 @@ namespace biometria_7
             return weight;
         }
 
+
+
         public static byte[,] ImageTo2DByteArray(Bitmap bmp)
         {
             int width = bmp.Width;
@@ -144,6 +147,233 @@ namespace biometria_7
                 }
             return result;
         }
+        #endregion
+        #region K3M
+        public static Bitmap K3M(Bitmap b)
+        {
+            int[] A0 = new int[] { 3, 6, 7, 12, 14, 15, 24, 28, 30, 31, 48, 56, 60,
+                                    62, 63, 96, 112, 120, 124, 126, 127, 129, 131, 135,
+                                    143, 159, 191, 192, 193, 195, 199, 207, 223, 224,
+                                    225, 227, 231, 239, 240, 241, 243, 247, 248, 249,
+                                    251, 252, 253, 254 };
+            int[] A1 = new int[] { 7, 14, 28, 56, 112, 131, 193, 224 };
+            int[] A2 = new int[] { 7, 14, 15, 28, 30, 56, 60, 112, 120, 131, 135,
+                                    193, 195, 224, 225, 240 };
+            int[] A3 = new int[] { 7, 14, 15, 28, 30, 31, 56, 60, 62, 112, 120,
+                                    124, 131, 135, 143, 193, 195, 199, 224, 225, 227,
+                                    240, 241, 248 };
+            int[] A4 = new int[] { 7, 14, 15, 28, 30, 31, 56, 60, 62, 63, 112, 120,
+                                    124, 126, 131, 135, 143, 159, 193, 195, 199, 207,
+                                    224, 225, 227, 231, 240, 241, 243, 248, 249, 252 };
+            int[] A5 = new int[] { 7, 14, 15, 28, 30, 31, 56, 60, 62, 63, 112, 120,
+                                    124, 126, 131, 135, 143, 159, 191, 193, 195, 199,
+                                    207, 224, 225, 227, 231, 239, 240, 241, 243, 248,
+                                    249, 251, 252, 254 };
+            int[] A1px = new int[] { 3, 6, 7, 12, 14, 15, 24, 28, 30, 31, 48, 56,
+                                    60, 62, 63, 96, 112, 120, 124, 126, 127, 129, 131,
+                                    135, 143, 159, 191, 192, 193, 195, 199, 207, 223,
+                                    224, 225, 227, 231, 239, 240, 241, 243, 247, 248,
+                                    249, 251, 252, 253, 254 };
+            var aList = new List<HashSet<int>>();
+            aList.Add(A1.ToHashSet());
+            aList.Add(A2.ToHashSet());
+            aList.Add(A3.ToHashSet());
+            aList.Add(A4.ToHashSet());
+            aList.Add(A5.ToHashSet());
+            byte[,] grayS = ImageTo2DByteArray(b);
+            BitmapData data = b.LockBits(new Rectangle(0, 0, b.Width, b.Height), ImageLockMode.ReadWrite, PixelFormat.Format24bppRgb);
+            byte[] vs = new byte[data.Stride * data.Height];
+            Marshal.Copy(data.Scan0, vs, 0, vs.Length);
+            // :)
+            for (int i = 0; i < data.Height; i++)
+                for (int y = 0; y < data.Width; y++)
+                    grayS[i, y] = (byte)(grayS[i, y] < 25 ? 1 : 0);
 
+            int weight;
+            bool change;
+            List<(int, int)> marked = new List<(int, int)>();
+            List<(int, int)> changed = new List<(int, int)>();
+            int counter = 0;
+            do
+            {
+                counter++;
+                change = false;
+                for (int i = 0; i < data.Height; i++)
+                {
+                    for (int j = 0; j < data.Width; j++)
+                    {
+                        if (vs[(i * data.Stride) + (j * 3)] != 0)
+                            continue;
+                        weight = CalculateWeight(i, j, grayS, data.Width, data.Height);
+                        if (A0.Contains(weight))
+                        {
+                            marked.Add((i, j));
+                        }
+                    }
+                }
+                foreach (var A in aList)
+                {
+                    foreach ((int y, int x) p in marked)
+                    {
+                        weight = CalculateWeight(p.y, p.x, grayS, data.Width, data.Height);
+                        if (A.Contains(weight))
+                        {
+                            grayS[p.Item1, p.Item2] = 0;
+                            vs[(p.y * data.Stride) + (p.x * 3)] =
+                            vs[(p.y * data.Stride) + (p.x * 3) + 1] =
+                            vs[(p.y * data.Stride) + (p.x * 3) + 2] = byte.MaxValue;
+
+                            changed.Add(p);
+                            change = true;
+                        }
+                    }
+
+                    foreach ((int, int) p in changed)
+                    {
+                        marked.Remove(p);
+                    }
+                    changed.Clear();
+                }
+
+
+                marked.Clear();
+            } while (change);
+            for (int i = 0; i < data.Height; i++)
+            {
+                for (int j = 0; j < data.Height; j++)
+                {
+                    weight = CalculateWeight(i, j, grayS, data.Width, data.Height);
+                    if (A1px.Contains(weight))
+                    {
+                        grayS[i, j] = 0;
+                        vs[(i * data.Stride) + (j * 3)] =
+                        vs[(i * data.Stride) + (j * 3) + 1] =
+                        vs[(i * data.Stride) + (j * 3) + 2] = byte.MaxValue;
+                    }
+                }
+            }
+            Marshal.Copy(vs, 0, data.Scan0, vs.Length);
+            b.UnlockBits(data);
+            return b;
+        }
+
+        #endregion
+
+        public static Bitmap Zhang(Bitmap b)
+        {
+            byte[,] grayS = ImageTo2DByteArray(b);
+            BitmapData data = b.LockBits(new Rectangle(0, 0, b.Width, b.Height), ImageLockMode.ReadWrite, PixelFormat.Format24bppRgb);
+            byte[] vs = new byte[data.Stride * data.Height];
+            Marshal.Copy(data.Scan0, vs, 0, vs.Length);
+
+            for (int i = 0; i < data.Height; i++)
+                for (int y = 0; y < data.Width; y++)
+                    grayS[i, y] = (byte)(grayS[i, y] < 25 ? 1 : 0);
+
+            List<(int, int)> zwdeletable = new List<(int, int)>();
+            bool d;
+            int bp, cp;
+            do
+            {
+                zwdeletable.Clear();
+                for (int i = 0; i < b.Width; i++)
+                {
+                    for (int j = 0; j < b.Height; j++)
+                    {
+                        //1)
+                        if (vs[(j * data.Stride) + (i * 3)] != 0)
+                            continue;
+
+                        //2)
+                        bp = 0;
+                        if (i + 1 < b.Width && vs[(j) * data.Stride + (i + 1) * 3] == 0)
+                            bp++;
+                        if (j - 1 > 0 && i + 1 < b.Width && vs[(j - 1) * data.Stride + (i + 1) * 3] == 0)
+                            bp++;
+                        if (j - 1 > 0 && vs[(j - 1) * data.Stride + (i) * 3] == 0)
+                            bp++;
+                        if (i - 1 > 0 && j - 1 > 0 && vs[(j - 1) * data.Stride + (i - 1) * 3] == 0)
+                            bp++;
+                        if (i - 1 > 0 && vs[(j) * data.Stride + (i - 1) * 3] == 0)
+                            bp++;
+                        if (i - 1 > 0 && j + 1 < b.Height && vs[(j + 1) * data.Stride + (i - 1) * 3] == 0)
+                            bp++;
+                        if (j + 1 < b.Height && vs[(j + 1) * data.Stride + (i) * 3] == 0)
+                            bp++;
+                        if (i + 1 < b.Width && j + 1 < b.Height && vs[(j + 1) * data.Stride + (i + 1) * 3] == 0)
+                            bp++;
+                        if (bp < 2 || bp > 6)
+                            continue;
+
+                        //3)
+                        cp = 0;
+                        if (i + 1 < b.Width && vs[(j) * data.Stride + (i + 1) * 3] == 255)
+                            if (j - 1 > 0 && i + 1 < b.Width && vs[(j - 1) * data.Stride + (i + 1) * 3] == 0)
+                                cp++;
+                        if (j - 1 > 0 && i + 1 < b.Width && vs[(j - 1) * data.Stride + (i + 1) * 3] == 255)
+                            if (j - 1 > 0 && vs[(j - 1) * data.Stride + (i) * 3] == 0)
+                                cp++;
+                        if (j - 1 > 0 && vs[(j - 1) * data.Stride + (i) * 3] == 255)
+                            if (i - 1 > 0 && j - 1 > 0 && vs[(j - 1) * data.Stride + (i - 1) * 3] == 0)
+                                cp++;
+                        if (i - 1 > 0 && j - 1 > 0 && vs[(j - 1) * data.Stride + (i - 1) * 3] == 255)
+                            if (i - 1 > 0 && vs[(j) * data.Stride + (i - 1) * 3] == 0)
+                                cp++;
+                        if (i - 1 > 0 && vs[(j) * data.Stride + (i - 1) * 3] == 255)
+                            if (i - 1 > 0 && j + 1 < b.Height && vs[(j + 1) * data.Stride + (i - 1) * 3] == 0)
+                                cp++;
+                        if (i - 1 > 0 && j + 1 < b.Height && vs[(j + 1) * data.Stride + (i - 1) * 3] == 255)
+                            if (j + 1 < b.Height && vs[(j + 1) * data.Stride + (i) * 3] == 0)
+                                cp++;
+                        if (j + 1 < b.Height && vs[(j + 1) * data.Stride + (i) * 3] == 255)
+                            if (i + 1 < b.Width && j + 1 < b.Height && vs[(j) * data.Stride + (i + 1) * 3] == 0)
+                                cp++;
+                        if (i + 1 < b.Width && j + 1 < b.Height && vs[(j + 1) * data.Stride + (i + 1) * 3] == 255)
+                            if (i + 1 < b.Width && vs[(j) * data.Stride + (i + 1) * 3] == 0)
+                                cp++;
+                        if (cp != 1)
+                            continue;
+
+                        //4)
+                        d = true;
+                        if (i + 1 >= b.Width || (i + 1 < b.Width && vs[(j) * data.Stride + (i + 1) * 3] == 255))
+                            if (j - 1 < 0 || (j - 1 > 0 && vs[(j - 1) * data.Stride + (i) * 3] == 255))
+                                if (i - 1 < 0 || (i - 1 > 0 && vs[(j) * data.Stride + (i - 1) * 3] == 255))
+                                    d = false;
+                        if (d)
+                            if (j - 2 > 0 && vs[(j - 2) * data.Stride + (i) * 3] == 0)
+                                d = false;
+                        if (d)
+                            continue;
+
+                        //5)
+                        d = true;
+                        if (i + 1 >= b.Width || (i + 1 < b.Width && vs[(j) * data.Stride + (i + 1) * 3] == 255))
+                            if (j - 1 < 0 || (j - 1 > 0 && vs[(j - 1) * data.Stride + (i) * 3] == 255))
+                                if (i + 1 >= b.Width || (i + 1 < b.Width && vs[(j) * data.Stride + (i + 1) * 3] == 255))
+                                    d = false;
+                        if (d)
+                            if (i + 2 < b.Width && vs[(j) * data.Stride + (i + 2) * 3] == 0)
+                                d = false;
+                        if (d)
+                            continue;
+
+                        zwdeletable.Add((i, j));
+                    }
+                }
+
+                foreach ((int x, int y) p in zwdeletable)
+                {
+                    //grayS[p.Item1, p.Item2] = 0;
+                    vs[(p.y * data.Stride) + (p.x * 3)] =
+                    vs[(p.y * data.Stride) + (p.x * 3) + 1] =
+                    vs[(p.y * data.Stride) + (p.x * 3) + 2] = byte.MaxValue;
+                }
+
+            } while (zwdeletable.Count != 0);
+            Marshal.Copy(vs, 0, data.Scan0, vs.Length);
+            b.UnlockBits(data);
+            return b;
+        }
     }
 }

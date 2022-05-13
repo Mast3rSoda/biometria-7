@@ -73,7 +73,25 @@ namespace biometria_7
 
         private void K3M_Click(object sender, RoutedEventArgs e)
         {
-
+            if(sourceImage == null)
+            {
+                MessageBox.Show("You haven't uploaded any files", "Image error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            Bitmap bitmap = new Bitmap(this.sourceImage.Width, this.sourceImage.Height);
+            bitmap = (Bitmap)this.imageToEdit.Clone();
+            Img.Source = ImageSourceFromBitmap(Algorithm.K3M(bitmap));
+        }
+        private void Zhang_Click(object sender, RoutedEventArgs e)
+        {
+            if(sourceImage == null)
+            {
+                MessageBox.Show("You haven't uploaded any files", "Image error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            Bitmap bitmap = new Bitmap(this.sourceImage.Width, this.sourceImage.Height);
+            bitmap = (Bitmap)this.imageToEdit.Clone();
+            Img.Source = ImageSourceFromBitmap(Algorithm.Zhang(bitmap));
         }
     }
 }

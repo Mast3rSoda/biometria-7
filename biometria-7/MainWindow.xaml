@@ -21,6 +21,7 @@
             <StackPanel Grid.Column="1">
                 <Button Name="KMM" Content="KMM" Click="KMM_Click"></Button>
                 <Button Name="K3M" Content="K3M" Click="K3M_Click"></Button>
+                <Button Name="Zhang" Content="Zhang" Click="Zhang_Click"></Button>
             </StackPanel>
         </Grid>
     </DockPanel>
